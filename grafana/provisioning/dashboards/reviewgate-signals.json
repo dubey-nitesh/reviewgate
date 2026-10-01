@@ -1,0 +1,163 @@
+{
+  "title": "reviewgate — Signals to Watch",
+  "uid": "reviewgate-signals",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": { "from": "now-90d", "to": "now" },
+  "links": [
+    {
+      "title": "← Metrics Overview",
+      "url": "/d/reviewgate-metrics",
+      "type": "link",
+      "icon": "external link",
+      "tooltip": "Back to reviewgate Metrics dashboard",
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+      "options": {
+        "mode": "markdown",
+        "content": "## Signals to Watch\nFour computed ratios derived from collected metrics. Each stat turns **yellow** when it needs attention and **red** when it is out of acceptable range. Green = healthy. Thresholds are conservative starting points — tune them once real production traffic flows through."
+      }
+    },
+
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Review Engagement Ratio",
+      "description": "Human avg review comments ÷ AI avg review comments. A ratio below 2 means reviewers are engaging with AI PRs almost as lightly as human ones — rubber-stamp risk. Below 1 means AI PRs are getting MORE scrutiny than human PRs, which is unusual and worth investigating.",
+      "gridPos": { "x": 0, "y": 3, "w": 6, "h": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green",  "value": 2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round( avg(review_comment_count) FILTER (WHERE confidence = 'none')::numeric / NULLIF(avg(review_comment_count) FILTER (WHERE confidence IN ('definite','likely')), 0), 1) FROM pr_metrics",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "AI PR Share %",
+      "description": "Percentage of all PRs that are AI-authored (definite + likely). Above 50% means AI PRs outnumber human ones — review bandwidth may not keep up. Above 70% is a red flag: the team may be merging AI code faster than it can be properly reviewed.",
+      "gridPos": { "x": 6, "y": 3, "w": 6, "h": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "percent",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red",    "value": 70 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round( count(*) FILTER (WHERE confidence IN ('definite','likely'))::numeric / NULLIF(count(*), 0) * 100, 1) FROM pr_metrics",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Escape Rate per AI PR",
+      "description": "Escaped defects linked to AI-authored PRs divided by total AI PR count. Above 0.1 means roughly 1 in 10 AI PRs is associated with a defect that reached production — watch this trend carefully. Above 0.3 means the review gate is not catching problems consistently.",
+      "gridPos": { "x": 12, "y": 3, "w": 6, "h": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red",    "value": 0.3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round( count(DISTINCT e.id)::numeric / NULLIF(count(DISTINCT m.id), 0), 2) FROM pr_metrics m LEFT JOIN escape_records e ON e.source_pr_id = m.pr_id AND e.repo = m.repo WHERE m.confidence IN ('definite','likely')",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Confirmed Escape Fraction",
+      "description": "Fraction of all escape records that are commit-linked or manually supplied (vs heuristic time-window). Below 0.6 means most detections are best-effort guesses, not confirmed links — the escape data is less trustworthy. Below 0.4 means the heuristic is dominating and results should be treated as indicative only.",
+      "gridPos": { "x": 18, "y": 3, "w": 6, "h": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 0.4 },
+              { "color": "green",  "value": 0.6 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round( count(*) FILTER (WHERE detection_method IN ('manual','commit-linked'))::numeric / NULLIF(count(*), 0), 2) FROM escape_records",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 6,
+      "type": "text",
+      "title": "How to read these signals",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 5 },
+      "options": {
+        "mode": "markdown",
+        "content": "| Signal | Green | Yellow | Red | What to do |\n|---|---|---|---|---|\n| **Review Engagement Ratio** | > 2× | 1–2× | < 1× | If yellow/red: check whether reviewers are actually reading AI-generated diffs, or just approving. Consider requiring a second reviewer for AI PRs. |\n| **AI PR Share %** | < 50% | 50–70% | > 70% | If yellow/red: review velocity may not keep up with AI output. Consider enforcing a human-authored PR quota or increasing reviewer capacity. |\n| **Escape Rate per AI PR** | < 0.1 | 0.1–0.3 | > 0.3 | If yellow/red: AI-authored changes are reaching production with defects. Tighten the gate policy threshold or require human sign-off on complex PRs. |\n| **Confirmed Escape Fraction** | > 0.6 | 0.4–0.6 | < 0.4 | If yellow/red: most escape detections are heuristic guesses. Add `Fixes #<issue>` references in commit messages to improve commit-linkage accuracy. |"
+      }
+    }
+  ]
+}

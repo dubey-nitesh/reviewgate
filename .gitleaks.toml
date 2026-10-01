@@ -1,0 +1,12 @@
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Project-specific allowlist"
+# verify.js line 6 contains a placeholder PAT comment (ghp_xxxx — only 4 chars
+# after the prefix; real PATs are 36 chars). Gitleaks default rules require a
+# full-length match so this is unlikely to trigger, but allowlisted explicitly
+# so a stricter future rule update can't produce a false positive here.
+regexes = ['''ghp_xxxx''']

@@ -1,0 +1,27 @@
+# Grafana datasource-as-code. Provisioned automatically on container
+# start — no manual "Add data source" click-through needed.
+#
+# Read-only access: this file connects Grafana with the same DATABASE_*
+# credentials the app itself uses (docker-compose.yml), which currently
+# has full read/write access to the database (there is no separate
+# read-only Postgres role in this MVP). Operators who want Grafana
+# genuinely unable to write should create a dedicated read-only role and
+# point REVIEWGATE_DB_USER/PASSWORD at it instead — not enforced by this
+# file, which only configures the connection, not the underlying grant.
+apiVersion: 1
+
+datasources:
+  - name: reviewgate-postgres
+    type: postgres
+    access: proxy
+    url: $REVIEWGATE_DB_HOST:5432
+    database: $REVIEWGATE_DB_NAME
+    user: $REVIEWGATE_DB_USER
+    secureJsonData:
+      password: $REVIEWGATE_DB_PASSWORD
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false
+    isDefault: true
+    editable: false

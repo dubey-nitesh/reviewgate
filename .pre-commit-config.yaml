@@ -1,0 +1,12 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: npx eslint --fix
+        language: system
+        files: \.(ts|tsx|js)$

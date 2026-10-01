@@ -1,0 +1,247 @@
+{
+  "title": "reviewgate Metrics",
+  "uid": "reviewgate-metrics",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": { "from": "now-90d", "to": "now" },
+  "links": [
+    {
+      "title": "Signals to Watch →",
+      "url": "/d/reviewgate-signals",
+      "type": "link",
+      "icon": "external link",
+      "tooltip": "Threshold signals — review engagement ratio, AI share, escape rate",
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "AI-authored PRs",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence IN ('definite', 'likely')",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Human-authored PRs",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'none'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Gate-Policy Block Rate",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FILTER (WHERE gate_policy_blocked = true)::float / NULLIF(count(*) FILTER (WHERE gate_policy_blocked IS NOT NULL), 0) FROM pr_metrics",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Consistency Finding Rate",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FILTER (WHERE consistency_finding_count > 0)::float / NULLIF(count(*) FILTER (WHERE consistency_finding_count IS NOT NULL), 0) FROM pr_metrics",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "AI vs Human PR Volume Over Time",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, count(*) FILTER (WHERE confidence IN ('definite','likely')) AS ai, count(*) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Avg. Time to Merge (minutes) — AI vs Human",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(time_to_merge_minutes) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(time_to_merge_minutes) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Escaped Defects — Confirmed",
+      "description": "Commit-linked or manually-supplied — see FR-5.6.",
+      "gridPos": { "x": 0, "y": 12, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM escape_records WHERE detection_method IN ('manual', 'commit-linked')",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Escaped Defects — Heuristic (best-effort)",
+      "description": "Time-window correlation, not a confirmed causal link — see FR-5.6.",
+      "gridPos": { "x": 6, "y": 12, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM escape_records WHERE detection_method = 'time-window-heuristic'",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "AI — Definite",
+      "description": "PRs with a Co-Authored-By AI trailer (highest-confidence signal).",
+      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'definite'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "AI — Likely",
+      "description": "PRs matching an AI branch pattern or PR-template marker, but no commit trailer.",
+      "gridPos": { "x": 6, "y": 16, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'likely'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Avg Review Comments — AI",
+      "description": "Mean review_comment_count for AI-authored PRs (definite + likely).",
+      "gridPos": { "x": 12, "y": 16, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "decimals": 1 }, "overrides": [] },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round(avg(review_comment_count)::numeric, 1) FROM pr_metrics WHERE confidence IN ('definite', 'likely')",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Avg Review Comments — Human",
+      "description": "Mean review_comment_count for human-authored PRs.",
+      "gridPos": { "x": 18, "y": 16, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "decimals": 1 }, "overrides": [] },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round(avg(review_comment_count)::numeric, 1) FROM pr_metrics WHERE confidence = 'none'",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Avg. Time to First Review (minutes) — AI vs Human",
+      "description": "How quickly PRs receive a first review, split by authorship.",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(time_to_first_review_minutes) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(time_to_first_review_minutes) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Avg. Review Comment Count — AI vs Human",
+      "description": "Weekly average reviewer engagement per PR, by authorship.",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(review_comment_count) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(review_comment_count) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Avg Consistency Findings per AI PR",
+      "description": "Mean number of naming/error-handling findings on AI-authored PRs (confidence: definite or likely) where the consistency checker ran.",
+      "gridPos": { "x": 0, "y": 28, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "decimals": 1 }, "overrides": [] },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round(avg(consistency_finding_count)::numeric, 1) FROM pr_metrics WHERE consistency_finding_count IS NOT NULL AND confidence IN ('definite', 'likely')",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Escaped Defects Over Time",
+      "description": "Weekly count of newly-detected escapes, split by detection method.",
+      "gridPos": { "x": 6, "y": 28, "w": 18, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('week', detected_at) AS time, count(*) FILTER (WHERE detection_method IN ('manual','commit-linked')) AS confirmed, count(*) FILTER (WHERE detection_method = 'time-window-heuristic') AS heuristic FROM escape_records WHERE $__timeFilter(detected_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    }
+  ]
+}

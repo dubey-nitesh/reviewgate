@@ -1,0 +1,9 @@
+# GitHub App manifest example — rename to app.yml and fill in after
+# registering the app.
+name: reviewgate
+default_permissions:
+  contents: read
+  pull_requests: write
+  checks: write
+default_events:
+  - pull_request

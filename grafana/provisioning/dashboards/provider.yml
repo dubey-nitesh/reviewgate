@@ -1,0 +1,13 @@
+# Points Grafana at the dashboard JSON file(s) in this directory.
+# Provisioned automatically on container start.
+apiVersion: 1
+
+providers:
+  - name: reviewgate
+    orgId: 1
+    folder: reviewgate
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards

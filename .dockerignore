@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.env
+*.log
+tests
+.devcontainer
+coverage
+aidlc-docs
+graphify-out
+graph.json

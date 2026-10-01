@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reviewgate}
+      POSTGRES_USER: ${POSTGRES_USER:-reviewgate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-reviewgate} -d ${POSTGRES_DB:-reviewgate}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reviewgate}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-reviewgate}
+      # db is a private container on the compose network, not internet-facing
+      # TLS.
+      DATABASE_SSL: "false"
+      APP_ID: ${APP_ID:?set APP_ID in .env}
+      PRIVATE_KEY_PATH: /run/secrets/private-key.pem
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?set WEBHOOK_SECRET in .env}
+      WEBHOOK_PROXY_URL: ${WEBHOOK_PROXY_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ./private-key.pem:/run/secrets/private-key.pem:ro
+    ports:
+      - "${PORT:-3000}:3000"
+
+  # Optional ops-style dashboard view (the app's own /dashboard route,
+  # above, is a lighter alternative that needs no extra service). Connects
+  # to `db` directly, never through `app` — it's the one extra process
+  # boundary this project has, distinct from the app's single-container
+  # model. Commented out of the default `docker compose up` critical path
+  # is deliberately NOT done — it's opt-in only in the sense that no code
+  # depends on it running; omit this service block entirely if you don't
+  # want it.
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Same DATABASE_* values as `app`, reused rather than duplicated —
+      # this datasource has read-only access at the Postgres role level,
+      # not enforced here (see the provisioning file's own comment).
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      REVIEWGATE_DB_HOST: db
+      REVIEWGATE_DB_NAME: ${POSTGRES_DB:-reviewgate}
+      REVIEWGATE_DB_USER: ${POSTGRES_USER:-reviewgate}
+      REVIEWGATE_DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+
+volumes:
+  db-data:
+  grafana-data:

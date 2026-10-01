@@ -1,0 +1,36 @@
+{
+  "name": "reviewgate",
+  "version": "0.1.0",
+  "description": "GitHub App flagging AI-authored PRs and instrumenting AI vs human review metrics",
+  "license": "AGPL-3.0-only",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "probot run ./dist/index.js",
+    "dev": "probot run ./src/index.ts",
+    "test": "vitest run",
+    "test:integration": "vitest run tests/integration",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "js-yaml": "^4.3.2",
+    "minimatch": "^10.2.6",
+    "pg": "^8.11.0",
+    "probot": "^13.0.0",
+    "tree-sitter": "^0.21.1",
+    "tree-sitter-python": "^0.23.4",
+    "tree-sitter-typescript": "^0.23.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "eslint": "^9.0.0",
+    "fast-check": "^3.19.0",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^1.6.0"
+  }
+}

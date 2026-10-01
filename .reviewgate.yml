@@ -1,0 +1,15 @@
+aiBranchPatterns:
+  - "claude/*"
+  - "ai/*"
+
+consistencyCheck:
+  enabled: true
+  scope: all
+
+gatePolicy:
+  enabled: true
+  scope: all
+
+escapeLinkage:
+  enabled: true
+  timeWindowDays: 30

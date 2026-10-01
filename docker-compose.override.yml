@@ -1,0 +1,8 @@
+# Local-dev override — not for production.
+# Exposes Postgres on the host so integration tests can connect from outside Docker.
+# docker-compose.override.yml is automatically picked up by `docker compose`
+# alongside docker-compose.yml; tracked here as a ready-to-use template.
+services:
+  db:
+    ports:
+      - "5432:5432"

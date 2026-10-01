@@ -1,0 +1,15 @@
+.env
+*.pem
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+
+# Local tooling artifacts some contributors' editors/agents may generate
+.claude/
+graphify-out/
+graph.json
+aidlc-docs/
