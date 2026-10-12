@@ -2,7 +2,7 @@
   "title": "reviewgate Metrics",
   "uid": "reviewgate-metrics",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "timezone": "browser",
   "time": { "from": "now-90d", "to": "now" },
@@ -16,6 +16,21 @@
       "targetBlank": false
     }
   ],
+  "templating": {
+    "list": [
+      {
+        "name": "repo",
+        "type": "query",
+        "label": "Repo",
+        "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+        "query": "SELECT DISTINCT repo FROM pr_metrics ORDER BY repo",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": ["$__all"] }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
@@ -25,7 +40,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence IN ('definite', 'likely')",
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence IN ('definite', 'likely') AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -38,7 +53,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'none'",
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'none' AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -52,7 +67,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FILTER (WHERE gate_policy_blocked = true)::float / NULLIF(count(*) FILTER (WHERE gate_policy_blocked IS NOT NULL), 0) FROM pr_metrics",
+          "rawSql": "SELECT count(*) FILTER (WHERE gate_policy_blocked = true)::float / NULLIF(count(*) FILTER (WHERE gate_policy_blocked IS NOT NULL), 0) FROM pr_metrics WHERE repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -66,7 +81,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FILTER (WHERE consistency_finding_count > 0)::float / NULLIF(count(*) FILTER (WHERE consistency_finding_count IS NOT NULL), 0) FROM pr_metrics",
+          "rawSql": "SELECT count(*) FILTER (WHERE consistency_finding_count > 0)::float / NULLIF(count(*) FILTER (WHERE consistency_finding_count IS NOT NULL), 0) FROM pr_metrics WHERE repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -79,7 +94,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT date_trunc('week', created_at) AS time, count(*) FILTER (WHERE confidence IN ('definite','likely')) AS ai, count(*) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, count(*) FILTER (WHERE confidence IN ('definite','likely')) AS ai, count(*) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) AND repo IN ($repo) GROUP BY 1 ORDER BY 1",
           "format": "time_series"
         }
       ]
@@ -88,11 +103,12 @@
       "id": 6,
       "type": "timeseries",
       "title": "Avg. Time to Merge (minutes) — AI vs Human",
+      "description": "Mean is sensitive to outliers — see the Mean ÷ Median Skew panels below before drawing conclusions from this alone.",
       "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(time_to_merge_minutes) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(time_to_merge_minutes) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(time_to_merge_minutes) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(time_to_merge_minutes) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) AND repo IN ($repo) GROUP BY 1 ORDER BY 1",
           "format": "time_series"
         }
       ]
@@ -106,7 +122,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FROM escape_records WHERE detection_method IN ('manual', 'commit-linked')",
+          "rawSql": "SELECT count(*) FROM escape_records WHERE detection_method IN ('manual', 'commit-linked') AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -120,7 +136,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FROM escape_records WHERE detection_method = 'time-window-heuristic'",
+          "rawSql": "SELECT count(*) FROM escape_records WHERE detection_method = 'time-window-heuristic' AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -135,7 +151,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'definite'",
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'definite' AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -149,7 +165,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'likely'",
+          "rawSql": "SELECT count(*) FROM pr_metrics WHERE confidence = 'likely' AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -164,7 +180,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT round(avg(review_comment_count)::numeric, 1) FROM pr_metrics WHERE confidence IN ('definite', 'likely')",
+          "rawSql": "SELECT round(avg(review_comment_count)::numeric, 1) FROM pr_metrics WHERE confidence IN ('definite', 'likely') AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -179,7 +195,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT round(avg(review_comment_count)::numeric, 1) FROM pr_metrics WHERE confidence = 'none'",
+          "rawSql": "SELECT round(avg(review_comment_count)::numeric, 1) FROM pr_metrics WHERE confidence = 'none' AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -194,7 +210,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(time_to_first_review_minutes) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(time_to_first_review_minutes) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(time_to_first_review_minutes) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(time_to_first_review_minutes) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) AND repo IN ($repo) GROUP BY 1 ORDER BY 1",
           "format": "time_series"
         }
       ]
@@ -208,7 +224,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(review_comment_count) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(review_comment_count) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, avg(review_comment_count) FILTER (WHERE confidence IN ('definite','likely')) AS ai, avg(review_comment_count) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) AND repo IN ($repo) GROUP BY 1 ORDER BY 1",
           "format": "time_series"
         }
       ]
@@ -224,7 +240,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT round(avg(consistency_finding_count)::numeric, 1) FROM pr_metrics WHERE consistency_finding_count IS NOT NULL AND confidence IN ('definite', 'likely')",
+          "rawSql": "SELECT round(avg(consistency_finding_count)::numeric, 1) FROM pr_metrics WHERE consistency_finding_count IS NOT NULL AND confidence IN ('definite', 'likely') AND repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -238,7 +254,134 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT date_trunc('week', detected_at) AS time, count(*) FILTER (WHERE detection_method IN ('manual','commit-linked')) AS confirmed, count(*) FILTER (WHERE detection_method = 'time-window-heuristic') AS heuristic FROM escape_records WHERE $__timeFilter(detected_at) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('week', detected_at) AS time, count(*) FILTER (WHERE detection_method IN ('manual','commit-linked')) AS confirmed, count(*) FILTER (WHERE detection_method = 'time-window-heuristic') AS heuristic FROM escape_records WHERE $__timeFilter(detected_at) AND repo IN ($repo) GROUP BY 1 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+
+    {
+      "id": 17,
+      "type": "text",
+      "title": "",
+      "gridPos": { "x": 0, "y": 36, "w": 24, "h": 3 },
+      "options": {
+        "mode": "markdown",
+        "content": "## Distribution — why the mean alone is misleading\nCycle-time data is almost always right-skewed: most PRs merge quickly, but a handful of very slow outliers drag the **mean** far above what's typical. The panels below show the **median (p50)** and tail percentiles (p75/p90/p95) alongside the mean, so a single slow PR can't masquerade as 'the AI PRs are 10x slower' when the typical case is much closer."
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Time-to-Merge Percentiles (minutes) — AI vs Human",
+      "description": "p50 is the median: half of PRs in that group merged faster than this, half slower. Compare p50 to the mean to see how much outliers are skewing the average.",
+      "gridPos": { "x": 0, "y": 39, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT CASE WHEN confidence IN ('definite','likely') THEN 'AI' ELSE 'Human' END AS group, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY time_to_merge_minutes)) AS p50_median, round(percentile_cont(0.75) WITHIN GROUP (ORDER BY time_to_merge_minutes)) AS p75, round(percentile_cont(0.9) WITHIN GROUP (ORDER BY time_to_merge_minutes)) AS p90, round(percentile_cont(0.95) WITHIN GROUP (ORDER BY time_to_merge_minutes)) AS p95, round(avg(time_to_merge_minutes)) AS mean FROM pr_metrics WHERE repo IN ($repo) AND time_to_merge_minutes IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Time-to-First-Review Percentiles (minutes) — AI vs Human",
+      "description": "Same breakdown as the merge-time panel, for how long a PR waits for its first reviewer comment.",
+      "gridPos": { "x": 12, "y": 39, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT CASE WHEN confidence IN ('definite','likely') THEN 'AI' ELSE 'Human' END AS group, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY time_to_first_review_minutes)) AS p50_median, round(percentile_cont(0.75) WITHIN GROUP (ORDER BY time_to_first_review_minutes)) AS p75, round(percentile_cont(0.9) WITHIN GROUP (ORDER BY time_to_first_review_minutes)) AS p90, round(percentile_cont(0.95) WITHIN GROUP (ORDER BY time_to_first_review_minutes)) AS p95, round(avg(time_to_first_review_minutes)) AS mean FROM pr_metrics WHERE repo IN ($repo) AND time_to_first_review_minutes IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Mean ÷ Median Skew — AI (time to merge)",
+      "description": "1.0 means a normal, symmetric distribution. The higher this goes, the more a few slow outliers (not typical behavior) are inflating the average — a ratio of 5+ means 'the mean is lying to you'.",
+      "gridPos": { "x": 0, "y": 47, "w": 6, "h": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 1.5 },
+              { "color": "red",    "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round( (avg(time_to_merge_minutes) / NULLIF(percentile_cont(0.5) WITHIN GROUP (ORDER BY time_to_merge_minutes), 0))::numeric, 1) FROM pr_metrics WHERE confidence IN ('definite','likely') AND repo IN ($repo)",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Mean ÷ Median Skew — Human (time to merge)",
+      "description": "Same ratio, computed for human-authored PRs only, for comparison against the AI figure to the left.",
+      "gridPos": { "x": 6, "y": 47, "w": 6, "h": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 1.5 },
+              { "color": "red",    "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT round( (avg(time_to_merge_minutes) / NULLIF(percentile_cont(0.5) WITHIN GROUP (ORDER BY time_to_merge_minutes), 0))::numeric, 1) FROM pr_metrics WHERE confidence = 'none' AND repo IN ($repo)",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Slowest AI-authored PRs (time to merge)",
+      "description": "The actual outliers behind the AI mean/median gap — useful for spot-checking whether a handful of unusual PRs (not typical AI behavior) are driving the headline number.",
+      "gridPos": { "x": 12, "y": 47, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT repo, pr_id, time_to_merge_minutes, review_comment_count FROM pr_metrics WHERE confidence IN ('definite','likely') AND repo IN ($repo) AND time_to_merge_minutes IS NOT NULL ORDER BY time_to_merge_minutes DESC LIMIT 15",
+          "format": "table"
+        }
+      ]
+    },
+
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Median Time to Merge (minutes) — AI vs Human",
+      "description": "Same weekly breakdown as the 'Avg.' panel above, but using the median instead of the mean — compare the two to see how much outlier weeks are distorting the average view.",
+      "gridPos": { "x": 0, "y": 55, "w": 24, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('week', created_at) AS time, percentile_cont(0.5) WITHIN GROUP (ORDER BY time_to_merge_minutes) FILTER (WHERE confidence IN ('definite','likely')) AS ai, percentile_cont(0.5) WITHIN GROUP (ORDER BY time_to_merge_minutes) FILTER (WHERE confidence = 'none') AS human FROM pr_metrics WHERE $__timeFilter(created_at) AND repo IN ($repo) GROUP BY 1 ORDER BY 1",
           "format": "time_series"
         }
       ]
