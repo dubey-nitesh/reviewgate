@@ -2,7 +2,7 @@
   "title": "reviewgate — Signals to Watch",
   "uid": "reviewgate-signals",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "timezone": "browser",
   "time": { "from": "now-90d", "to": "now" },
@@ -16,6 +16,21 @@
       "targetBlank": false
     }
   ],
+  "templating": {
+    "list": [
+      {
+        "name": "repo",
+        "type": "query",
+        "label": "Repo",
+        "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
+        "query": "SELECT DISTINCT repo FROM pr_metrics ORDER BY repo",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": ["$__all"] }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
@@ -52,7 +67,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT round( avg(review_comment_count) FILTER (WHERE confidence = 'none')::numeric / NULLIF(avg(review_comment_count) FILTER (WHERE confidence IN ('definite','likely')), 0), 1) FROM pr_metrics",
+          "rawSql": "SELECT round( avg(review_comment_count) FILTER (WHERE confidence = 'none')::numeric / NULLIF(avg(review_comment_count) FILTER (WHERE confidence IN ('definite','likely')), 0), 1) FROM pr_metrics WHERE repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -83,7 +98,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT round( count(*) FILTER (WHERE confidence IN ('definite','likely'))::numeric / NULLIF(count(*), 0) * 100, 1) FROM pr_metrics",
+          "rawSql": "SELECT round( count(*) FILTER (WHERE confidence IN ('definite','likely'))::numeric / NULLIF(count(*), 0) * 100, 1) FROM pr_metrics WHERE repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -113,7 +128,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT round( count(DISTINCT e.id)::numeric / NULLIF(count(DISTINCT m.id), 0), 2) FROM pr_metrics m LEFT JOIN escape_records e ON e.source_pr_id = m.pr_id AND e.repo = m.repo WHERE m.confidence IN ('definite','likely')",
+          "rawSql": "SELECT round( count(DISTINCT e.id)::numeric / NULLIF(count(DISTINCT m.id), 0), 2) FROM pr_metrics m LEFT JOIN escape_records e ON e.source_pr_id = m.pr_id AND e.repo = m.repo WHERE m.confidence IN ('definite','likely') AND m.repo IN ($repo)",
           "format": "table"
         }
       ]
@@ -143,7 +158,7 @@
       "datasource": { "type": "postgres", "uid": "reviewgate-postgres" },
       "targets": [
         {
-          "rawSql": "SELECT round( count(*) FILTER (WHERE detection_method IN ('manual','commit-linked'))::numeric / NULLIF(count(*), 0), 2) FROM escape_records",
+          "rawSql": "SELECT round( count(*) FILTER (WHERE detection_method IN ('manual','commit-linked'))::numeric / NULLIF(count(*), 0), 2) FROM escape_records WHERE repo IN ($repo)",
           "format": "table"
         }
       ]
